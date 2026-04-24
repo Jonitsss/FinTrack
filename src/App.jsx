@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from './hooks/useAuth.js'
 import { useFinances } from './hooks/useFinances.js'
 import LoginPage from './pages/LoginPage.jsx'
@@ -32,7 +32,14 @@ export default function App() {
     setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500)
   }, [])
 
-  if (authLoading) {
+  const [showSplash, setShowSplash] = useState(true)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 3500)
+    return () => clearTimeout(timer)
+  }, [])
+
+  if (authLoading || showSplash) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', gap: '12px' }}>
         <div style={{ fontFamily: 'var(--font-serif)', fontSize: '36px', color: 'var(--accent)', letterSpacing: '-0.5px' }}>Fintrack</div>
