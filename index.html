@@ -3,6 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <script>
+      document.addEventListener('gesturestart', function(e) { e.preventDefault(); });
+      document.addEventListener('gesturechange', function(e) { e.preventDefault(); });
+      document.addEventListener('gestureend', function(e) { e.preventDefault(); });
+      document.addEventListener('touchmove', function(e) { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    </script>
     <title>Fintrack</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
