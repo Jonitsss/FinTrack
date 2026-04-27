@@ -3,7 +3,7 @@ import { Section, ExpenseRow, AddRowBtn, AddForm, FormGroup, Input, Select, Page
 import MoneyInput, { parseMoneyInput } from '../components/MoneyInput.jsx'
 
 const METHOD_OPTS = [['efectivo','Efectivo'],['tarjeta','Tarjeta'],['debito','Débito'],['cuenta','Cuenta']]
-const CAT_OPTS = [['mercado','Mercado'],['nafta','Nafta / transporte'],['salidas','Salidas'],['ropa','Ropa'],['salud','Salud'],['otro','Otro']]
+const CAT_OPTS = [['comida','Comida'],['mercado','Mercado'],['nafta','Nafta'],['transporte','Transporte'],['salidas','Salidas'],['ropa','Ropa'],['salud','Salud'],['educacion','Educación'],['hogar','Hogar'],['entretenimiento','Entretenimiento'],['otro','Otro']]
 
 export default function VariableExpensesPage({ finances, month, year, showToast }) {
   const { variableExpenses, addVariable, deleteVariable, loading } = finances

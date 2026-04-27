@@ -7,16 +7,13 @@ export default function SavingsPage({ finances, showToast }) {
 
   const [income, setIncome] = useState('')
   const [savingsGoalInput, setSavingsGoalInput] = useState('')
-  const [reserveInput, setReserveInput] = useState('')
   const [initialized, setInitialized] = useState(false)
 
-  // Cargar datos de Supabase cuando llegan
   useEffect(() => {
     if (!loading && goals && !initialized) {
       const totalInc = Number(goals.income1 || 0) + Number(goals.income2 || 0)
       if (totalInc > 0) setIncome(String(totalInc))
       if (goals.savings_goal) setSavingsGoalInput(String(goals.savings_goal))
-      if (goals.reserve) setReserveInput(String(goals.reserve))
       setInitialized(true)
     }
   }, [goals, loading, initialized])
@@ -25,20 +22,17 @@ export default function SavingsPage({ finances, showToast }) {
   const totalFixed = fixedExpenses.reduce((a, x) => a + Number(x.amount), 0)
   const totalVar = variableExpenses.reduce((a, x) => a + Number(x.amount), 0)
   const totalExpenses = totalFixed + totalVar
-  const reserve = parseMoneyInput(reserveInput)
   const savingsGoal = parseMoneyInput(savingsGoalInput)
-  const committed = totalExpenses + reserve + savingsGoal
-  const available = totalIncome - committed
+  const available = totalIncome - totalExpenses - savingsGoal
   const feasible = available >= 0
 
   const handleSave = async () => {
-    const data = {
-      income1: totalIncome, // guardamos todo en income1
+    await saveGoals({
+      income1: totalIncome,
       income2: 0,
       savings_goal: savingsGoal,
-      reserve: reserve,
-    }
-    await saveGoals(data)
+      reserve: 0,
+    })
     showToast('Objetivos guardados ✓')
   }
 
@@ -46,18 +40,15 @@ export default function SavingsPage({ finances, showToast }) {
 
   return (
     <div>
-      <PageHeader title="Objetivo de ahorro" subtitle="Configurá tus ingresos y metas" />
+      <PageHeader title="Objetivo de ahorro" subtitle="Configurá tus ingresos y meta de ahorro" />
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', marginBottom: '20px' }}>
-        <div className="goal-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px', marginBottom: '16px' }}>
+        <div className="goal-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '14px', marginBottom: '16px' }}>
           <FormGroup label="Ingreso mensual ($)">
             <MoneyInput value={income} onChange={setIncome} placeholder="1.400.000" />
           </FormGroup>
-          <FormGroup label="Objetivo de ahorro ($)">
+          <FormGroup label="Meta de ahorro ($)">
             <MoneyInput value={savingsGoalInput} onChange={setSavingsGoalInput} placeholder="600.000" />
-          </FormGroup>
-          <FormGroup label="Reserva ($)">
-            <MoneyInput value={reserveInput} onChange={setReserveInput} placeholder="100.000" />
           </FormGroup>
         </div>
         <button onClick={handleSave} style={{ background: 'var(--accent)', color: '#0f0f0f', border: 'none', padding: '12px 28px', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)', width: '100%' }}>
@@ -65,16 +56,10 @@ export default function SavingsPage({ finances, showToast }) {
         </button>
       </div>
 
-      <div className="metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '14px', marginBottom: '20px' }}>
+      <div className="metrics-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px', marginBottom: '20px' }}>
         <MetricCard label="Ingreso total" value={fmt(totalIncome)} color="green" />
-        <MetricCard label="Comprometido" value={fmt(committed)} color="red" sub="gastos + reserva + ahorro" />
-        <MetricCard label="Para gastos diarios" value={fmt(available)} color={feasible ? 'amber' : 'red'} />
-        <MetricCard
-          label="¿Alcanza?"
-          value={feasible ? '✓ Sí' : '✗ Ajustá'}
-          color={feasible ? 'green' : 'red'}
-          sub={feasible ? `Sobran ${fmt(available)}` : `Faltan ${fmt(Math.abs(available))}`}
-        />
+        <MetricCard label="Total egresos" value={fmt(totalExpenses)} color="red" sub="fijos + variables" />
+        <MetricCard label="Para gastos diarios" value={fmt(available)} color={feasible ? 'amber' : 'red'} sub={feasible ? `Sobran ${fmt(available)}` : `Faltan ${fmt(Math.abs(available))}`} />
       </div>
 
       <SavingsProgress current={savingsGoal} goal={savingsGoal} label="Meta de ahorro mensual" />
@@ -85,8 +70,7 @@ export default function SavingsPage({ finances, showToast }) {
           ['Ingresos', fmt(totalIncome), 'var(--accent)'],
           ['Gastos fijos', fmt(totalFixed), 'var(--amber)'],
           ['Gastos variables', fmt(totalVar), 'var(--red)'],
-          ['Reserva', fmt(reserve), 'var(--blue)'],
-          ['Ahorro objetivo', fmt(savingsGoal), 'var(--purple)'],
+          ['Meta de ahorro', fmt(savingsGoal), 'var(--purple)'],
         ].map(([label, value, color]) => (
           <div key={label} style={{ display: 'flex', justifyContent: 'space-between', padding: '7px 0', borderBottom: '1px solid var(--border)', fontSize: '13px' }}>
             <span style={{ color: 'var(--muted2)' }}>{label}</span>
