@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Section, ExpenseRow, AddRowBtn, AddForm, FormGroup, Input, Select, PageHeader, fmt, MONTHS } from '../components/UI.jsx'
+import MoneyInput, { parseMoneyInput } from '../components/MoneyInput.jsx'
 
 const METHOD_OPTS = [['efectivo','Efectivo'],['tarjeta','Tarjeta'],['debito','Débito'],['cuenta','Cuenta']]
 const CAT_OPTS = [['mercado','Mercado'],['nafta','Nafta / transporte'],['salidas','Salidas'],['ropa','Ropa'],['salud','Salud'],['otro','Otro']]
@@ -19,7 +20,7 @@ export default function VariableExpensesPage({ finances, month, year, showToast 
 
   const handleAdd = async () => {
     if (!form.name || !form.amount) return
-    const err = await addVariable({ ...form, amount: parseFloat(form.amount) })
+    const err = await addVariable({ ...form, amount: parseMoneyInput(form.amount) })
     if (!err) {
       setForm({ name: '', amount: '', method: 'efectivo', category: 'mercado' })
       setOpen(false)
@@ -48,8 +49,8 @@ export default function VariableExpensesPage({ finances, month, year, showToast 
         {variableExpenses.length === 0
           ? <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: '13px' }}>Todavía no registraste gastos este mes</div>
           : <>
-              <div style={{ padding: '4px 20px 2px', fontSize: '11px', color: 'var(--muted)', display: 'grid', gridTemplateColumns: '1fr 120px 100px 80px', gap: '12px', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
-                <span>Descripción</span><span>Monto</span><span>Medio</span><span>—</span>
+              <div style={{ padding: '4px 20px 2px', fontSize: '11px', color: 'var(--muted)', display: 'grid', gridTemplateColumns: '1fr 110px 100px 36px', gap: '10px', textTransform: 'uppercase', letterSpacing: '0.07em', fontWeight: 600 }}>
+                <span>Descripción</span><span>Monto</span><span>Medio</span><span></span>
               </div>
               {variableExpenses.map(item => <ExpenseRow key={item.id} item={item} onDelete={deleteVariable} />)}
             </>
@@ -62,16 +63,16 @@ export default function VariableExpensesPage({ finances, month, year, showToast 
             onSave={handleAdd}
             onCancel={() => setOpen(false)}
             fields={<>
-              <FormGroup label="Descripción" style={{ flex: 2, minWidth: '160px' }}>
+              <FormGroup label="Descripción" style={{ flex: 2, minWidth: '140px' }}>
                 <Input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="ej: Super, nafta, salida..." />
               </FormGroup>
-              <FormGroup label="Monto ($)" style={{ flex: 1, minWidth: '120px' }}>
-                <Input type="number" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} placeholder="0.00" />
+              <FormGroup label="Monto" style={{ flex: 1, minWidth: '110px' }}>
+                <MoneyInput value={form.amount} onChange={v => setForm({...form, amount: v})} placeholder="0" />
               </FormGroup>
-              <FormGroup label="Medio de pago" style={{ flex: 1, minWidth: '130px' }}>
+              <FormGroup label="Medio de pago" style={{ flex: 1, minWidth: '120px' }}>
                 <Select options={METHOD_OPTS} value={form.method} onChange={e => setForm({...form, method: e.target.value})} />
               </FormGroup>
-              <FormGroup label="Categoría" style={{ flex: 1, minWidth: '130px' }}>
+              <FormGroup label="Categoría" style={{ flex: 1, minWidth: '120px' }}>
                 <Select options={CAT_OPTS} value={form.category} onChange={e => setForm({...form, category: e.target.value})} />
               </FormGroup>
             </>}

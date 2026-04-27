@@ -1,12 +1,57 @@
 import { useState, useEffect } from 'react'
-import { MetricCard, SavingsProgress, PageHeader, FormGroup, Input, fmt } from '../components/UI.jsx'
+import { MetricCard, SavingsProgress, PageHeader, FormGroup, fmt } from '../components/UI.jsx'
+
+// Formatea número con puntos de miles mientras escribís
+const fmtInput = (val) => {
+  const clean = String(val).replace(/\D/g, '')
+  if (!clean) return ''
+  return Number(clean).toLocaleString('es-AR')
+}
+
+// Extrae el número limpio de un string con puntos
+const parseInput = (val) => {
+  const clean = String(val).replace(/\./g, '').replace(/,/g, '')
+  return parseFloat(clean) || 0
+}
+
+function MoneyInput({ label, value, onChange, placeholder }) {
+  const [display, setDisplay] = useState('')
+
+  useEffect(() => {
+    if (value) setDisplay(fmtInput(value))
+  }, [value])
+
+  const handleChange = (e) => {
+    const raw = e.target.value.replace(/\./g, '').replace(/,/g, '').replace(/\D/g, '')
+    setDisplay(fmtInput(raw))
+    onChange(raw)
+  }
+
+  return (
+    <FormGroup label={label}>
+      <div style={{ position: 'relative' }}>
+        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', fontSize: '13px', pointerEvents: 'none' }}>$</span>
+        <input
+          inputMode="numeric"
+          pattern="[0-9]*"
+          value={display}
+          onChange={handleChange}
+          placeholder={placeholder}
+          style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border2)', color: 'var(--text)', padding: '10px 12px 10px 24px', borderRadius: 'var(--radius-sm)', fontSize: '14px', outline: 'none', fontFamily: 'var(--font-mono)', boxSizing: 'border-box' }}
+          onFocus={e => e.target.style.borderColor = 'var(--accent)'}
+          onBlur={e => e.target.style.borderColor = 'var(--border2)'}
+        />
+      </div>
+    </FormGroup>
+  )
+}
 
 export default function SavingsPage({ finances, showToast }) {
   const { goals, fixedExpenses, variableExpenses, saveGoals, loading } = finances
   const [form, setForm] = useState({ income1: '', income2: '', savings_goal: '', reserve: '' })
 
   useEffect(() => {
-    if (goals) {
+    if (goals && (goals.income1 || goals.savings_goal)) {
       setForm({
         income1: goals.income1 || '',
         income2: goals.income2 || '',
@@ -16,27 +61,26 @@ export default function SavingsPage({ finances, showToast }) {
     }
   }, [goals])
 
-  const totalIncome = Number(form.income1 || 0) + Number(form.income2 || 0)
+  const totalIncome = parseInput(form.income1) + parseInput(form.income2)
   const totalFixed = fixedExpenses.reduce((a, x) => a + Number(x.amount), 0)
   const totalVar = variableExpenses.reduce((a, x) => a + Number(x.amount), 0)
   const totalExpenses = totalFixed + totalVar
-  const reserve = Number(form.reserve || 0)
-  const savingsGoal = Number(form.savings_goal || 0)
+  const reserve = parseInput(form.reserve)
+  const savingsGoal = parseInput(form.savings_goal)
   const committed = totalExpenses + reserve + savingsGoal
   const available = totalIncome - committed
   const feasible = available >= 0
 
   const handleSave = async () => {
-    await saveGoals({
-      income1: parseFloat(form.income1) || 0,
-      income2: parseFloat(form.income2) || 0,
-      savings_goal: parseFloat(form.savings_goal) || 0,
-      reserve: parseFloat(form.reserve) || 0,
-    })
+    const data = {
+      income1: parseInput(form.income1),
+      income2: parseInput(form.income2),
+      savings_goal: parseInput(form.savings_goal),
+      reserve: parseInput(form.reserve),
+    }
+    await saveGoals(data)
     showToast('Objetivos guardados ✓')
   }
-
-  const inputRow = { display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '14px', marginBottom: '16px' }
 
   if (loading) return <div style={{ color: 'var(--muted)', padding: '40px', textAlign: 'center' }}>Cargando...</div>
 
@@ -46,20 +90,12 @@ export default function SavingsPage({ finances, showToast }) {
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', marginBottom: '20px' }}>
         <div className="goal-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '14px', marginBottom: '16px' }}>
-          <FormGroup label="Ingreso 1ra quincena ($)">
-            <Input type="number" value={form.income1} onChange={e => setForm({...form, income1: e.target.value})} placeholder="ej: 1000000" />
-          </FormGroup>
-          <FormGroup label="Ingreso 2da quincena ($)">
-            <Input type="number" value={form.income2} onChange={e => setForm({...form, income2: e.target.value})} placeholder="ej: 400000" />
-          </FormGroup>
-          <FormGroup label="Objetivo de ahorro mensual ($)">
-            <Input type="number" value={form.savings_goal} onChange={e => setForm({...form, savings_goal: e.target.value})} placeholder="ej: 600000" />
-          </FormGroup>
-          <FormGroup label="Reserva mensual ($)">
-            <Input type="number" value={form.reserve} onChange={e => setForm({...form, reserve: e.target.value})} placeholder="ej: 100000" />
-          </FormGroup>
+          <MoneyInput label="Ingreso 1ra quincena ($)" value={form.income1} onChange={v => setForm({...form, income1: v})} placeholder="1.000.000" />
+          <MoneyInput label="Ingreso 2da quincena ($)" value={form.income2} onChange={v => setForm({...form, income2: v})} placeholder="400.000" />
+          <MoneyInput label="Objetivo de ahorro mensual ($)" value={form.savings_goal} onChange={v => setForm({...form, savings_goal: v})} placeholder="600.000" />
+          <MoneyInput label="Reserva mensual ($)" value={form.reserve} onChange={v => setForm({...form, reserve: v})} placeholder="100.000" />
         </div>
-        <button onClick={handleSave} style={{ background: 'var(--accent)', color: '#0f0f0f', border: 'none', padding: '10px 24px', borderRadius: 'var(--radius-sm)', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
+        <button onClick={handleSave} style={{ background: 'var(--accent)', color: '#0f0f0f', border: 'none', padding: '12px 28px', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)', width: '100%' }}>
           Guardar objetivos
         </button>
       </div>
