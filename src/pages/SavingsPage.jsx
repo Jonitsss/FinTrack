@@ -1,82 +1,42 @@
 import { useState, useEffect } from 'react'
 import { MetricCard, SavingsProgress, PageHeader, FormGroup, fmt } from '../components/UI.jsx'
-
-// Formatea número con puntos de miles mientras escribís
-const fmtInput = (val) => {
-  const clean = String(val).replace(/\D/g, '')
-  if (!clean) return ''
-  return Number(clean).toLocaleString('es-AR')
-}
-
-// Extrae el número limpio de un string con puntos
-const parseInput = (val) => {
-  const clean = String(val).replace(/\./g, '').replace(/,/g, '')
-  return parseFloat(clean) || 0
-}
-
-function MoneyInput({ label, value, onChange, placeholder }) {
-  const [display, setDisplay] = useState('')
-
-  useEffect(() => {
-    if (value) setDisplay(fmtInput(value))
-  }, [value])
-
-  const handleChange = (e) => {
-    const raw = e.target.value.replace(/\./g, '').replace(/,/g, '').replace(/\D/g, '')
-    setDisplay(fmtInput(raw))
-    onChange(raw)
-  }
-
-  return (
-    <FormGroup label={label}>
-      <div style={{ position: 'relative' }}>
-        <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--muted)', fontSize: '13px', pointerEvents: 'none' }}>$</span>
-        <input
-          inputMode="numeric"
-          pattern="[0-9]*"
-          value={display}
-          onChange={handleChange}
-          placeholder={placeholder}
-          style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border2)', color: 'var(--text)', padding: '10px 12px 10px 24px', borderRadius: 'var(--radius-sm)', fontSize: '14px', outline: 'none', fontFamily: 'var(--font-mono)', boxSizing: 'border-box' }}
-          onFocus={e => e.target.style.borderColor = 'var(--accent)'}
-          onBlur={e => e.target.style.borderColor = 'var(--border2)'}
-        />
-      </div>
-    </FormGroup>
-  )
-}
+import MoneyInput, { parseMoneyInput } from '../components/MoneyInput.jsx'
 
 export default function SavingsPage({ finances, showToast }) {
   const { goals, fixedExpenses, variableExpenses, saveGoals, loading } = finances
-  const [form, setForm] = useState({ income1: '', income2: '', savings_goal: '', reserve: '' })
 
+  const [income, setIncome] = useState('')
+  const [savingsGoalInput, setSavingsGoalInput] = useState('')
+  const [reserveInput, setReserveInput] = useState('')
+  const [initialized, setInitialized] = useState(false)
+
+  // Cargar datos de Supabase cuando llegan
   useEffect(() => {
-    if (goals && (goals.income1 || goals.savings_goal)) {
-      setForm({
-        income1: goals.income1 || '',
-        income2: goals.income2 || '',
-        savings_goal: goals.savings_goal || '',
-        reserve: goals.reserve || '',
-      })
+    if (!loading && goals && !initialized) {
+      const totalInc = Number(goals.income1 || 0) + Number(goals.income2 || 0)
+      if (totalInc > 0) setIncome(String(totalInc))
+      if (goals.savings_goal) setSavingsGoalInput(String(goals.savings_goal))
+      if (goals.reserve) setReserveInput(String(goals.reserve))
+      setInitialized(true)
     }
-  }, [goals])
+  }, [goals, loading, initialized])
 
-  const totalIncome = parseInput(form.income1) + parseInput(form.income2)
+  const totalIncome = parseMoneyInput(income)
   const totalFixed = fixedExpenses.reduce((a, x) => a + Number(x.amount), 0)
   const totalVar = variableExpenses.reduce((a, x) => a + Number(x.amount), 0)
   const totalExpenses = totalFixed + totalVar
-  const reserve = parseInput(form.reserve)
-  const savingsGoal = parseInput(form.savings_goal)
+  const reserve = parseMoneyInput(reserveInput)
+  const savingsGoal = parseMoneyInput(savingsGoalInput)
   const committed = totalExpenses + reserve + savingsGoal
   const available = totalIncome - committed
   const feasible = available >= 0
 
   const handleSave = async () => {
     const data = {
-      income1: parseInput(form.income1),
-      income2: parseInput(form.income2),
-      savings_goal: parseInput(form.savings_goal),
-      reserve: parseInput(form.reserve),
+      income1: totalIncome, // guardamos todo en income1
+      income2: 0,
+      savings_goal: savingsGoal,
+      reserve: reserve,
     }
     await saveGoals(data)
     showToast('Objetivos guardados ✓')
@@ -86,17 +46,22 @@ export default function SavingsPage({ finances, showToast }) {
 
   return (
     <div>
-      <PageHeader title="Objetivo de ahorro" subtitle="Configurá tus ingresos, meta de ahorro y reserva" />
+      <PageHeader title="Objetivo de ahorro" subtitle="Configurá tus ingresos y metas" />
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', marginBottom: '20px' }}>
-        <div className="goal-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '14px', marginBottom: '16px' }}>
-          <MoneyInput label="Ingreso 1ra quincena ($)" value={form.income1} onChange={v => setForm({...form, income1: v})} placeholder="1.000.000" />
-          <MoneyInput label="Ingreso 2da quincena ($)" value={form.income2} onChange={v => setForm({...form, income2: v})} placeholder="400.000" />
-          <MoneyInput label="Objetivo de ahorro mensual ($)" value={form.savings_goal} onChange={v => setForm({...form, savings_goal: v})} placeholder="600.000" />
-          <MoneyInput label="Reserva mensual ($)" value={form.reserve} onChange={v => setForm({...form, reserve: v})} placeholder="100.000" />
+        <div className="goal-form-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '14px', marginBottom: '16px' }}>
+          <FormGroup label="Ingreso mensual ($)">
+            <MoneyInput value={income} onChange={setIncome} placeholder="1.400.000" />
+          </FormGroup>
+          <FormGroup label="Objetivo de ahorro ($)">
+            <MoneyInput value={savingsGoalInput} onChange={setSavingsGoalInput} placeholder="600.000" />
+          </FormGroup>
+          <FormGroup label="Reserva ($)">
+            <MoneyInput value={reserveInput} onChange={setReserveInput} placeholder="100.000" />
+          </FormGroup>
         </div>
         <button onClick={handleSave} style={{ background: 'var(--accent)', color: '#0f0f0f', border: 'none', padding: '12px 28px', borderRadius: 'var(--radius-sm)', fontSize: '14px', fontWeight: 700, cursor: 'pointer', fontFamily: 'var(--font-sans)', width: '100%' }}>
-          Guardar objetivos
+          Guardar
         </button>
       </div>
 
@@ -112,12 +77,12 @@ export default function SavingsPage({ finances, showToast }) {
         />
       </div>
 
-      <SavingsProgress current={savingsGoal} goal={savingsGoal} label="Progreso de ahorro (meta mensual)" />
+      <SavingsProgress current={savingsGoal} goal={savingsGoal} label="Meta de ahorro mensual" />
 
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px 24px' }}>
         <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '14px' }}>Desglose del plan</div>
         {[
-          ['Ingresos totales', fmt(totalIncome), 'var(--accent)'],
+          ['Ingresos', fmt(totalIncome), 'var(--accent)'],
           ['Gastos fijos', fmt(totalFixed), 'var(--amber)'],
           ['Gastos variables', fmt(totalVar), 'var(--red)'],
           ['Reserva', fmt(reserve), 'var(--blue)'],
