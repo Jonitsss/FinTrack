@@ -2,12 +2,12 @@ import { MetricCard, SavingsProgress, Section, ExpenseRow, PageHeader, fmt } fro
 
 export default function Dashboard({ finances, month, year }) {
   const { goals, fixedExpenses, variableExpenses, loading } = finances
-  const totalIncome = Number(goals.income1 || 0) + Number(goals.income2 || 0)
+  const totalIncome = Number(goals?.income1 || 0) + Number(goals?.income2 || 0)
   const totalFixed = fixedExpenses.reduce((a, x) => a + Number(x.amount), 0)
   const totalVar = variableExpenses.reduce((a, x) => a + Number(x.amount), 0)
   const totalExpenses = totalFixed + totalVar
-  const reserve = Number(goals.reserve || 0)
-  const savingsGoal = Number(goals.savings_goal || 0)
+  const reserve = Number(goals?.reserve || 0)
+  const savingsGoal = Number(goals?.savings_goal || 0)
   const available = totalIncome - totalExpenses - reserve - savingsGoal
 
   const credits = fixedExpenses.filter(x => x.category === 'credito')
